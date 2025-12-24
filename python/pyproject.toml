@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "md-katex-pdf"
+version = "1.0.0"
+authors = [
+  { name="Johnnyprice29" },
+]
+description = "Convert Markdown to premium PDFs with KaTeX support via Playwright (Python version)."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "markdown-it-py",
+    "mdit-py-plugins",
+    "linkify-it-py",
+    "playwright",
+]
+
+[project.scripts]
+md-katex-pdf = "md_katex_pdf.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

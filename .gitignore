@@ -1,0 +1,15 @@
+# Common
+node_modules/
+__pycache__/
+*.pdf
+.DS_Store
+.env
+venv/
+.pytest_cache/
+dist/
+*.egg-info/
+test_data/
+
+# OS specific
+Thumbs.db
+Desktop.ini

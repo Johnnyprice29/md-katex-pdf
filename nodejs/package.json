@@ -1,0 +1,32 @@
+{
+  "name": "md-katex-pdf",
+  "version": "1.0.0",
+  "description": "Convert Markdown to premium PDFs with KaTeX support via Playwright.",
+  "main": "index.js",
+  "bin": {
+    "md-katex-pdf": "./index.js"
+  },
+  "scripts": {
+    "convert": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Johnnyprice29/md-katex-pdf.git"
+  },
+  "keywords": [
+    "markdown",
+    "pdf",
+    "katex",
+    "playwright",
+    "converter"
+  ],
+  "author": "Johnnyprice29",
+  "license": "MIT",
+  "dependencies": {
+    "arg": "^5.0.2",
+    "fs-extra": "^11.3.3",
+    "markdown-it": "^14.1.0",
+    "markdown-it-katex": "^2.0.3",
+    "playwright": "^1.57.0"
+  }
+}
