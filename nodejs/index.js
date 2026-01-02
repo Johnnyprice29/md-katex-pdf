@@ -17,6 +17,7 @@ const md = markdownIt({
  * Renders MD to HTML and prints via Playwright.
  */
 async function convertMdToPdf(mdPath, pdfPath, options = {}) {
+    const { browser: existingBrowser, useHeaderFooter = false } = options;
     const content = await fs.readFile(mdPath, 'utf8');
     const htmlContent = md.render(content);
 
@@ -61,22 +62,28 @@ async function convertMdToPdf(mdPath, pdfPath, options = {}) {
     </html>
     `;
 
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.setContent(template, { waitUntil: 'networkidle' });
+    const browser = existingBrowser || await chromium.launch();
+    try {
+        const page = await browser.newPage();
+        await page.setContent(template, { waitUntil: 'networkidle' });
 
-    const pdfOptions = {
-        path: pdfPath,
-        format: 'A4',
-        margin: { top: '60px', bottom: '60px', left: '40px', right: '40px' },
-        printBackground: true,
-        displayHeaderFooter: options.useHeaderFooter || false,
-        headerTemplate: options.useHeaderFooter ? '<div style="font-size: 10px; margin: 0 auto;"> <span class="title"></span> </div>' : '<span></span>',
-        footerTemplate: options.useHeaderFooter ? '<div style="font-size: 10px; margin: 0 auto;"> <span class="pageNumber"></span> / <span class="totalPages"></span> </div>' : '<span></span>',
-    };
+        const pdfOptions = {
+            path: pdfPath,
+            format: 'A4',
+            margin: { top: '60px', bottom: '60px', left: '40px', right: '40px' },
+            printBackground: true,
+            displayHeaderFooter: useHeaderFooter,
+            headerTemplate: useHeaderFooter ? '<div style="font-size: 10px; margin: 0 auto;"> <span class="title"></span> </div>' : '<span></span>',
+            footerTemplate: useHeaderFooter ? '<div style="font-size: 10px; margin: 0 auto;"> <span class="pageNumber"></span> / <span class="totalPages"></span> </div>' : '<span></span>',
+        };
 
-    await page.pdf(pdfOptions);
-    await browser.close();
+        await page.pdf(pdfOptions);
+        await page.close();
+    } finally {
+        if (!existingBrowser) {
+            await browser.close();
+        }
+    }
 }
 
 module.exports = { convertMdToPdf };
@@ -99,13 +106,16 @@ if (require.main === module) {
     const useHeaderFooter = args['--header'] || false;
 
     (async () => {
+        let browser;
         try {
             const stats = await fs.stat(input);
             console.log(`Processing: ${input}`);
+            
+            browser = await chromium.launch();
 
             if (stats.isFile()) {
                 const output = args['--output'] || input.replace(/\.md$/, '.pdf');
-                await convertMdToPdf(input, output, { useHeaderFooter });
+                await convertMdToPdf(input, output, { useHeaderFooter, browser });
                 console.log(`File converted: ${output}`);
             } else {
                 const getFilesRecursively = async (dir) => {
@@ -127,24 +137,26 @@ if (require.main === module) {
 
                 if (mdFiles.length === 0) {
                     console.log("No markdown files found.");
-                    return;
-                }
+                } else {
+                    for (const mdPath of mdFiles) {
+                        const pdfPath = mdPath.replace(/\.md$/, '.pdf');
 
-                for (const mdPath of mdFiles) {
-                    const pdfPath = mdPath.replace(/\.md$/, '.pdf');
+                        if (!refresh && await fs.exists(pdfPath)) {
+                            continue;
+                        }
 
-                    if (!refresh && await fs.exists(pdfPath)) {
-                        continue;
+                        console.log(`Building ${path.relative(input, mdPath)}...`);
+                        await convertMdToPdf(mdPath, pdfPath, { useHeaderFooter, browser });
                     }
-
-                    console.log(`Building ${path.relative(input, mdPath)}...`);
-                    await convertMdToPdf(mdPath, pdfPath, { useHeaderFooter });
                 }
             }
             console.log("Done.");
         } catch (err) {
             console.error(`Error: ${err.message}`);
             process.exit(1);
+        } finally {
+            if (browser) await browser.close();
         }
     })();
 }
+

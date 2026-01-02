@@ -10,7 +10,10 @@ authors = [
 ]
 description = "Convert Markdown to premium PDFs with KaTeX support via Playwright (Python version)."
 readme = "README.md"
+license = {file = "LICENSE"}
 requires-python = ">=3.8"
+
+
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

@@ -1,5 +1,6 @@
 import argparse
 import sys
+import asyncio
 from .converter import process_directory
 
 def main():
@@ -12,7 +13,7 @@ def main():
     args = parser.parse_args()
     
     try:
-        process_directory(args.input, refresh=args.refresh, use_header_footer=args.header, output_path=args.output)
+        asyncio.run(process_directory(args.input, refresh=args.refresh, use_header_footer=args.header, output_path=args.output))
         print("Done.")
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -20,3 +21,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

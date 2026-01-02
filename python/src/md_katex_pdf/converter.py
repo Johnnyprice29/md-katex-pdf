@@ -11,7 +11,7 @@ md = (
     .use(texmath_plugin)
 )
 
-async def convert_md_to_pdf(md_path, pdf_path, use_header_footer=False):
+async def convert_md_to_pdf(md_path, pdf_path, use_header_footer=False, browser_instance=None):
     """
     Renders markdown to PDF using Playwright.
     """
@@ -44,6 +44,9 @@ async def convert_md_to_pdf(md_path, pdf_path, use_header_footer=False):
                 line-height: 1.6;
                 color: #24292f;
             }}
+            @media (max-width: 767px) {{
+                .markdown-body {{ padding: 20px; }}
+            }}
             h1, h2, h3, h4 {{ font-weight: 800; color: #1a1e23; border-bottom: none; }}
             h1 {{ margin-top: 0; font-size: 2.5em; border-bottom: 2px solid #eaecef; padding-bottom: 0.3em; }}
             code {{ font-family: 'Fira Code', monospace; background-color: #f6f8fa; padding: 0.2em 0.4em; border-radius: 6px; }}
@@ -58,9 +61,8 @@ async def convert_md_to_pdf(md_path, pdf_path, use_header_footer=False):
     </html>
     """
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
+    async def _run_conversion(pwp_browser):
+        page = await pwp_browser.new_page()
         await page.set_content(template, wait_until="networkidle")
         
         pdf_options = {
@@ -74,33 +76,45 @@ async def convert_md_to_pdf(md_path, pdf_path, use_header_footer=False):
         }
         
         await page.pdf(**pdf_options)
-        await browser.close()
+        await page.close()
 
-def process_directory(input_path, refresh=False, use_header_footer=False, output_path=None):
+    if browser_instance:
+        await _run_conversion(browser_instance)
+    else:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch()
+            await _run_conversion(browser)
+            await browser.close()
+
+async def process_directory(input_path, refresh=False, use_header_footer=False, output_path=None):
     """
     Recursively scans and converts markdown files.
     """
     input_p = Path(input_path)
     
-    if input_p.is_file():
-        pdf_file = Path(output_path) if output_path else input_p.with_suffix(".pdf")
-        print(f"Building {input_p.name}...")
-        asyncio.run(convert_md_to_pdf(str(input_p), str(pdf_file), use_header_footer))
-        return
-
-    files = list(input_p.rglob("*.md"))
-    root = input_p
-
-    if not files:
-        print("No markdown files found.")
-        return
-
-    for md_file in files:
-        pdf_file = md_file.with_suffix(".pdf")
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
         
-        if not refresh and pdf_file.exists():
-            continue
-            
-        print(f"Building {md_file.relative_to(root)}...")
-        asyncio.run(convert_md_to_pdf(str(md_file), str(pdf_file), use_header_footer))
+        if input_p.is_file():
+            pdf_file = Path(output_path) if output_path else input_p.with_suffix(".pdf")
+            print(f"Building {input_p.name}...")
+            await convert_md_to_pdf(str(input_p), str(pdf_file), use_header_footer, browser)
+        else:
+            files = list(input_p.rglob("*.md"))
+            root = input_p
+
+            if not files:
+                print("No markdown files found.")
+            else:
+                for md_file in files:
+                    pdf_file = md_file.with_suffix(".pdf")
+                    
+                    if not refresh and pdf_file.exists():
+                        continue
+                        
+                    print(f"Building {md_file.relative_to(root)}...")
+                    await convert_md_to_pdf(str(md_file), str(pdf_file), use_header_footer, browser)
+        
+        await browser.close()
+
 
